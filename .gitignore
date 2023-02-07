@@ -13,3 +13,4 @@ vcf/cparse.so
 .vscode/
 env/
 .eggs/
+*.egg-info/
