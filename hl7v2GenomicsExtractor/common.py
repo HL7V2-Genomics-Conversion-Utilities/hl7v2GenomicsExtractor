@@ -288,21 +288,20 @@ def get_alphabet_index(n):
 # The following function is used to fetch the annotations for the record
 # supplied. It returns None is there are no annotations for that record
 def get_annotations(record, spdi_representation, vcf_type, xml):
-    if annotations is None:
-        if xml:
-            return get_annotations_from_xml(record, spdi_representation)
-        if vcf_type is not None:
-            return get_annotations_from_vcf(
-                record, spdi_representation, vcf_type)
-        else:
-            return {'dna_change': spdi_representation,
-                    'amino_acid_change': None, 'clin_sig': "not specified",
-                    'phenotype': None, 'gene_studied': 'HGNC:0000^NoGene^HGNC',
-                    'transcript_ref_seq': None,
-                    'molecular_consequence': None,
-                    'genomic_dna_change': None, 'dna_region': None,
-                    'protein_ref_seq': None, 'db_snp_id': None,
-                    'phenotype_description': None, 'read_depth': None}
+    if xml:
+        return get_annotations_from_xml(record, spdi_representation)
+    if vcf_type is not None:
+        return get_annotations_from_vcf(
+            record, spdi_representation, vcf_type)
+    else:
+        return {'dna_change': spdi_representation,
+                'amino_acid_change': None, 'clin_sig': "not specified",
+                'phenotype': None, 'gene_studied': 'HGNC:0000^NoGene^HGNC',
+                'transcript_ref_seq': None,
+                'molecular_consequence': None,
+                'genomic_dna_change': None, 'dna_region': None,
+                'protein_ref_seq': None, 'db_snp_id': None,
+                'phenotype_description': None, 'read_depth': None}
 
 
 def get_annotations_from_vcf(record, spdi_representation, vcf_type):

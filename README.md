@@ -2,7 +2,7 @@
 
 ### Introduction
 
-HL7 Version 2 messaging format is the predominant means by which labs send structured results to Electronic Health Records (EHRs). EHRs can directly import HL7 V2 formatted results that conform to the [HL7 Lab Results Interface Implementation Guide](https://www.hl7.org/documentcenter/public/standards/dstu/V251_IG_LRI_R1_STU3_2018JUN.pdf). Here, we provide an open source utility for converting variants from XML format into HL7 V2 format.
+HL7 Version 2 messaging format is the predominant means by which labs send structured results to Electronic Health Records (EHRs). EHRs can directly import HL7 V2 formatted results that conform to the [HL7 Lab Results Interface Implementation Guide](https://www.hl7.org/documentcenter/public/standards/dstu/V251_IG_LRI_R1_STU3_2018JUN.pdf). Here, we provide an open source utility for converting variants from VCF/XML format into HL7 V2 format.
 
 ### Install
 Before installing hl7v2GenomicsExtractor you need to install cython and wheel.
