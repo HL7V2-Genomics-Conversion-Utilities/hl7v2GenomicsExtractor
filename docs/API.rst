@@ -3,8 +3,8 @@
 API
 ==========
 
-vcf2hl7v2.Converter
+hl7v2GenomicsExtractor.Converter
 ------------------
 
-.. autoclass:: vcf2hl7v2.Converter
+.. autoclass:: hl7v2GenomicsExtractor.Converter
    :members:

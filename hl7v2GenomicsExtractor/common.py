@@ -73,6 +73,58 @@ class Genomic_Source_Class(Enum):
     SOMATIC = SOMATIC
 
 
+def get_allelic_state(record, ratio_ad_dp):
+    allelic_state = ''
+    allelic_code = ''
+    allelic_frequency = None
+    # Using  the first sample
+    sample = record.samples[0]
+    alleles = sample.gt_alleles
+    if record.CHROM != 'M':
+        if len(alleles) >= 2 and sample.gt_type == 1:
+            allelic_state = 'heterozygous'
+            allelic_code = 'LA6706-1'
+        elif len(alleles) >= 2:
+            allelic_state = 'homozygous'
+            allelic_code = 'LA6705-3'
+        elif sample.gt_type is not None and len(alleles) == 1:
+            allelic_state = 'hemizygous'
+            allelic_code = 'LA6707-9'
+        else:
+            _error_log_allelicstate(record)
+    elif(sample.gt_type is not None and
+         len(alleles) == 1 and
+         alleles[0] == '1'):
+        if hasattr(sample.data, 'AD') and hasattr(sample.data, 'DP'):
+            try:
+                if(isinstance(sample.data.AD, list) and
+                   len(sample.data.AD) > 0):
+                    ratio = float(
+                        sample.data.AD[0]) / float(sample.data.DP)
+                else:
+                    ratio = float(sample.data.AD) / float(sample.data.DP)
+                allelic_frequency = ratio
+                if ratio > ratio_ad_dp:
+                    allelic_state = "homoplasmic"
+                    allelic_code = "LA6704-6"
+                else:
+                    allelic_state = "heteroplasmic"
+                    allelic_code = "LA6703-8"
+            except Exception as e:
+                general_logger.debug(e)
+                _error_log_allelicstate(record)
+                pass
+        else:
+            _error_log_allelicstate(record)
+    else:
+        _error_log_allelicstate(record)
+    return {
+                'ALLELE': allelic_state,
+                'CODE': allelic_code,
+                'FREQUENCY': allelic_frequency
+            }
+
+
 def get_variant_name_xml(variant):
     if(is_present_xml(variant, 'transcriptchange') and
        is_present_xml(variant.get('transcriptchange'), 'transcript') and
@@ -107,42 +159,71 @@ def extract_chrom_identifier(chrom):
     return chrom
 
 
-def get_spdi_representation(record, ref_seq):
-    return (f'{ref_seq}:{int(record.get("position")) - 1}:' +
-            f'{record.get("reference")}:{record.get("alternate")}')
+def get_spdi_representation(record, ref_seq, xml):
+    if xml:
+        return (f'{ref_seq}:{int(record.get("position")) - 1}:' +
+                f'{record.get("reference")}:{record.get("alternate")}')
+    else:
+        return (f'{ref_seq}:{record.POS - 1}:{record.REF}:' +
+                f'{"".join(list(map(str, list(record.ALT))))}')
 
 
-def get_chromosome(variant):
-    return str(variant.get("chromosome"))
+def get_chromosome(variant, xml_reader):
+    if not xml_reader:
+        variant.CHROM = extract_chrom_identifier(variant.CHROM)
+        return str(variant.CHROM)
+    else:
+        return str(variant.get("chromosome"))
 
 
-def get_position(variant):
-    return int(variant.get("position"))
+def get_position(variant, xml_reader):
+    if not xml_reader:
+        return int(variant.POS)
+    else:
+        return int(variant.get("position"))
 
 
-def get_reference(variant):
-    return str(variant.get("reference"))
+def get_reference(variant, xml_reader):
+    if not xml_reader:
+        return str(variant.REF)
+    else:
+        return str(variant.get("reference"))
 
 
-def get_alternate(variant):
-    return str(variant.get("alternate"))
+def get_alternate(variant, xml):
+    if xml:
+        return str(variant.get("alternate"))
+    else:
+        return ("".join(list(map(str, list(variant.ALT)))))
 
 
-def get_variant_display_name(record):
-    return get_variant_name_xml(record)
+def get_variant_display_name(record, spdi_representation, xml):
+    if xml:
+        return get_variant_name_xml(record)
+    else:
+        return spdi_representation
 
 
-def get_as_af(record):
-    allelic_state =\
-        GENOTYPE_TO_ALLELIC_STATE.get(str(record.get("genotype")))
-    allelic_frequency =\
-        (float(record.get("allelefraction")) / 100)
+def get_as_af(record, ratio_ad_dp, xml):
+    if xml:
+        allelic_state =\
+            GENOTYPE_TO_ALLELIC_STATE.get(str(record.get("genotype")))
+        allelic_frequency =\
+            (float(record.get("allelefraction")) / 100)
+    else:
+        alleles = get_allelic_state(record, ratio_ad_dp)
+        if alleles["CODE"] == '' and alleles["ALLELE"] == '':
+            allelic_state = None
+        else:
+            allelic_state =\
+                f'{alleles["CODE"]}^{alleles["ALLELE"].title()}^LN'
+        allelic_frequency = alleles["FREQUENCY"]
 
     return allelic_state, allelic_frequency
 
 
 def validate_filename(filename):
-    pattern = r'^[\w,\s\-,/,\.]+\.(xml)$'
+    pattern = r'^[\w,\s\-,/,\.]+\.(xml|vcf|vcf\.gz)$'
     result = re.match(pattern, filename)
     return bool(result)
 
@@ -170,6 +251,22 @@ def validate_chrom_identifier(chrom):
     return bool(result)
 
 
+def validate_ratio_ad_dp(ratio_ad_dp):
+    if not (ratio_ad_dp):
+        return False
+    if not isinstance(ratio_ad_dp, float):
+        return False
+    if ratio_ad_dp < 0 or ratio_ad_dp >= 1:
+        return False
+    return True
+
+
+def validate_has_tabix(has_tabix):
+    if not isinstance(has_tabix, bool):
+        return False
+    return True
+
+
 def validate_seed(seed):
     if isinstance(seed, int) and not isinstance(seed, bool):
         return True
@@ -188,17 +285,121 @@ def get_alphabet_index(n):
     return a_index
 
 
-def is_present(annotation, component):
-    if(not annotation[component].empty and
-       not pd.isna(annotation.iloc[0][component])):
-        return True
+# The following function is used to fetch the annotations for the record
+# supplied. It returns None is there are no annotations for that record
+def get_annotations(record, spdi_representation, vcf_type, xml):
+    if annotations is None:
+        if xml:
+            return get_annotations_from_xml(record, spdi_representation)
+        if vcf_type is not None:
+            return get_annotations_from_vcf(
+                record, spdi_representation, vcf_type)
+        else:
+            return {'dna_change': spdi_representation,
+                    'amino_acid_change': None, 'clin_sig': "not specified",
+                    'phenotype': None, 'gene_studied': 'HGNC:0000^NoGene^HGNC',
+                    'transcript_ref_seq': None,
+                    'molecular_consequence': None,
+                    'genomic_dna_change': None, 'dna_region': None,
+                    'protein_ref_seq': None, 'db_snp_id': None,
+                    'phenotype_description': None, 'read_depth': None}
+
+
+def get_annotations_from_vcf(record, spdi_representation, vcf_type):
+    if vcf_type == 'snpeff':
+        return get_annotations_from_snpeff_vcf(record, spdi_representation)
     else:
+        return {'dna_change': spdi_representation,
+                'amino_acid_change': None, 'clin_sig': "not specified",
+                'phenotype': None, 'gene_studied': 'HGNC:0000^NoGene^HGNC',
+                'transcript_ref_seq': None,
+                'molecular_consequence': None,
+                'genomic_dna_change': None, 'dna_region': None,
+                'protein_ref_seq': None, 'db_snp_id': None,
+                'phenotype_description': None, 'read_depth': None}
+
+
+def is_present_snpeff_vcf(record, index):
+    try:
+        component = record.INFO['ANN'][0].split("|")[index]
+        return True
+    except Exception as e:
         return False
 
 
-def get_annotations(record, spdi_representation):
-    return get_annotations_from_xml(record, spdi_representation)
-    
+def get_annotations_from_snpeff_vcf(record, spdi_representation):
+    if('ANN' not in record.INFO or
+       ('ANN' in record.INFO and len(record.INFO["ANN"]) == 0)):
+        return {'dna_change': spdi_representation,
+                'amino_acid_change': None, 'clin_sig': "not specified",
+                'phenotype': None, 'gene_studied': 'HGNC:0000^NoGene^HGNC',
+                'transcript_ref_seq': None,
+                'molecular_consequence': None,
+                'genomic_dna_change': None, 'dna_region': None,
+                'protein_ref_seq': None, 'db_snp_id': None,
+                'phenotype_description': None, 'read_depth': None}
+
+    if(is_present_snpeff_vcf(record, 9) and
+       is_present_snpeff_vcf(record, 6)):
+        dna_change = (f'{record.INFO["ANN"][0].split("|")[6]}:' +
+                      f'{record.INFO["ANN"][0].split("|")[9]}')
+    elif(is_present_snpeff_vcf(record, 9) and
+         not is_present_snpeff_vcf(record, 6)):
+        dna_change = f'{record.INFO["ANN"][0].split("|")[9]}'
+    else:
+        dna_change = spdi_representation
+
+    if(is_present_snpeff_vcf(record, 10) and
+       False):  # proteinrefseq
+        amino_acid_change = (f'{record.INFO["ANN"]["proteinRefSeq"][0]}:' +
+                             f'{record.INFO["ANN"][0].split("|")[10]}')
+    elif(is_present_snpeff_vcf(record, 10) and
+         not False):  # proteinrefseq
+        amino_acid_change = f'{record.INFO["ANN"][0].split("|")[10]}'
+    else:
+        amino_acid_change = None
+
+    if 'CLNSIG' in record.INFO:
+        if isinstance(record.INFO['CLNSIG'], list):
+            clin_sig = record.INFO['CLNSIG'][0]
+        else:
+            clin_sig = f"{record.INFO['CLNSIG']}"
+    else:
+        clin_sig = "not specified"
+
+    if 'CLNDNINCL' in record.INFO:
+        if isinstance(record.INFO['CLNDNINCL'], list):
+            phenotype = record.INFO['CLNDNINCL'][0]
+        else:
+            phenotype = f"{record.INFO['CLNDNINCL']}"
+    else:
+        phenotype = None
+
+    if False:  # Gene
+        gene_studied = record.INFO['GENE'][0]
+    else:
+        gene_studied = 'HGNC:0000^NoGene^HGNC'
+
+    transcript_ref_seq = None
+    molecular_consequence = None
+    genomic_dna_change = None
+    dna_region = None
+    protein_ref_seq = None
+    db_snp_id = None
+    phenotype_description = None
+    read_depth = None
+
+    return {'dna_change': dna_change,
+            'amino_acid_change': amino_acid_change,
+            'clin_sig': clin_sig, 'phenotype': phenotype,
+            'gene_studied': gene_studied,
+            'transcript_ref_seq': transcript_ref_seq,
+            'molecular_consequence': molecular_consequence,
+            'genomic_dna_change': genomic_dna_change,
+            'dna_region': dna_region,
+            'protein_ref_seq': protein_ref_seq, 'db_snp_id': db_snp_id,
+            'phenotype_description': phenotype_description,
+            'read_depth': read_depth}
 
 
 def is_present_xml(variant, component):

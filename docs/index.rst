@@ -1,4 +1,4 @@
-hl7v2GenomicsExtractor : Converts variants from XML format into HL7 V2 format.
+hl7v2GenomicsExtractor : Converts variants from VCF/XML format into HL7 V2 format.
 ===============================================
 
 Contents:

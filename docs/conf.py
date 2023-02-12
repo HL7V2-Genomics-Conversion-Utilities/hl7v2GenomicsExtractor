@@ -78,7 +78,8 @@ autodoc_mock_imports = [
     "hl7apy",
     "pytz",
     "pandas",
-    "numpy"]
+    "numpy",
+    "xmltodict"]
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []

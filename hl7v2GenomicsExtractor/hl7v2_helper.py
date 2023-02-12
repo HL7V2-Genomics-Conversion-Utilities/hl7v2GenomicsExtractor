@@ -95,16 +95,16 @@ class _HL7V2_Helper:
             self.message.add(obx)
             self.index += 1
 
-    def add_variant_obv(self, record, ref_seq, source_class,
+    def add_variant_obv(self, record, ref_seq, ratio_ad_dp, source_class,
                         annotation_record, spdi_representation, ref_build,
-                        variant_analysis_method):
-        allelic_state, allelic_frequency = get_as_af(record)
+                        variant_analysis_method, xml):
+        allelic_state, allelic_frequency = get_as_af(record, ratio_ad_dp, xml)
         variant_display_name =\
-            get_variant_display_name(record)
-        CHROM = get_chromosome(record)
-        POS = get_position(record)
-        REF = get_reference(record)
-        ALT = get_alternate(record)
+            get_variant_display_name(record, spdi_representation, xml)
+        CHROM = get_chromosome(record, xml)
+        POS = get_position(record, xml)
+        REF = get_reference(record, xml)
+        ALT = get_alternate(record, xml)
 
         if source_class is not None:
             if source_class.title() == Genomic_Source_Class.GERMLINE.value:
