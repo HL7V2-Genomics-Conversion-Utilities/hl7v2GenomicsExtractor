@@ -14,18 +14,14 @@ Conversion logic for VCF
 Conversion region
 -----------------
 
-Variants in the VCF file are intersected against an optional file listing variants to convert and a file listing clinical annotations. The following table summarizes the scope of VCF records converted based on these regions.
+Variants in the VCF file are intersected against an optional file listing variants to convert. The following table summarizes the scope of VCF records converted based on these regions.
 
-| Conversion Region      | Studied Region | Annotations     |  Output     |
-| :---:        |    :----:   |          :---: |  :---       |
-| Not Supplied      | Not Supplied       | Not Supplied   | <ul><li>Convert all variants in VCF.</li><li>HL7 V2 message contains no region-studied OBX observation group.</li></ul>            |
-| Not Supplied      | Not Supplied       | Supplied   | <ul><li>Convert all variants in VCF for which annotations are provided.</li><li>HL7 V2 message contains no region-studied OBX observation group.</li></ul>            |
-| Not Supplied      | Supplied       | Not Supplied   | <ul><li>Convert all variants in VCF.</li><li>HL7 V2 message contains one region-studied OBX observation group per studied chromosome.</li><ul><li>Studied region(s) reflected in ranges-examined component(s).</li></ul></ul>            |
-| Not Supplied      | Supplied       |  Supplied   | <ul><li>Convert all variants in VCF for which annotations are provided.</li><li>HL7 V2 message contains one region-studied OBX observation group per studied chromosome.</li><ul><li>Studied region(s) reflected in ranges-examined component(s).</li></ul></ul>            |
-|  Supplied      | Not Supplied       |  Not Supplied   | <ul><li>Convert all variants in conversion region.</li><li>HL7 V2 message contains no region-studied OBX observation group.</li></ul>            |
-|  Supplied      | Not Supplied       |   Supplied   | <ul><li>Convert all variants in conversion region for which annotations are provided.</li><li>HL7 V2 message contains no region-studied OBX observation group.</li></ul>           |
-|  Supplied      | Supplied       |  Not Supplied   | <ul><li>Convert all variants in conversion region.</li><li>HL7 V2 message contains one region-studied OBX observation group per studied chromosome intersected with conversion region.</li><ul><li>Studied region(s), intersected with conversion region, reflected in ranges-examined component(s).</li></ul></ul>
-|  Supplied      | Supplied       |  Supplied   | <ul><li>Convert all variants in conversion region for which annotations are provided.</li><li>HL7 V2 message contains one region-studied OBX observation group per studied chromosome intersected with conversion region.</li><ul><li>Studied region(s), intersected with conversion region, reflected in ranges-examined component(s).</li></ul></ul>  
+| Conversion Region      | Studied Region | Output     |
+| :---:        |    :----:   |   :---       |
+| Not Supplied   | Not Supplied | <ul><li>Convert all variants in VCF.</li><li>HL7 V2 message contains no region-studied OBX observation group.</li></ul>            |
+| Not Supplied      | Supplied   | <ul><li>Convert all variants in VCF.</li><li>HL7 V2 message contains one region-studied OBX observation group per studied chromosome.</li><ul><li>Studied region(s) reflected in ranges-examined component(s).</li></ul></ul>            |
+|  Supplied      | Not Supplied     | <ul><li>Convert all variants in conversion region.</li><li>HL7 V2 message contains no region-studied OBX observation group.</li></ul>            |
+|  Supplied      | Supplied     | <ul><li>Convert all variants in conversion region.</li><li>HL7 V2 message contains one region-studied OBX observation group per studied chromosome intersected with conversion region.</li><ul><li>Studied region(s), intersected with conversion region, reflected in ranges-examined component(s).</li></ul></ul>
 
 
 General conversion
